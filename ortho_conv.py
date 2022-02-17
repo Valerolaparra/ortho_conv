@@ -13,15 +13,11 @@ __all__ = ['OrthoConv']
 class OrthoConv:
     """
     A class for orthonormal convolutions
-
     A 2-D convolution that maintains dimensionality and can be trained to be
     orthonormal and invertible. If we minimise a reconstruction loss, then
-
     .. math::
         V^T V \cdot \tilde{Im} = \tilde{Im}
-
     and the convolutional matrix `V` is orthonormal.
-
     Parameters
     ----------
     filter_width : int (default=3)
@@ -32,7 +28,6 @@ class OrthoConv:
         assumed to be the same for both dimensions.
     input_channels : int (default=1)
         The number of channels in the input.
-
     Attributes
     ----------
     shape_W : List[int]
@@ -49,7 +44,6 @@ class OrthoConv:
         A list of filter indices that corresponds to the indices in `T_idxs`.
         This is set when called, and will be initialised as `None`.
     
-
     """
     def __init__(self,
                  filter_width: int = 3,
@@ -84,11 +78,9 @@ class OrthoConv:
             activation_L1 : float = 10e-5,
             weight_L1 : float = 0.0) -> None:
         """Trains to model for reconstruction.
-
         Optimises the model using Adam optimiser for the L2 loss between the
         input and the reconstructed input (one convolution then transposed
         convolution).
-
         Parameters
         ----------
         images : numpy.ndarray
@@ -123,10 +115,8 @@ class OrthoConv:
     def predict(self,
                 images : np.ndarray) -> np.ndarray:
         """Forward pass of the convolution.
-
         Calculates the forward pass of the convolution, i.e. images convolved
         with the filter.
-
         Parameters
         ----------
         images : numpy.ndarray
@@ -155,32 +145,28 @@ class OrthoConv:
     def inverse(self,
                 encoded : np.ndarray) -> np.ndarray:
         """Performs inverse convolution using the transpose.
-
         Performs a transpose convolution with the filter `W` to get the inverse
         transformation.
-
         Parameters
         ----------
         encoded : numpy.ndarray
             Encoded array to be inverted.
-
         Returns
         -------
         reconstructed : numpy.ndarray
             The reconstructed image from the inverse transformation.
         """
+
         Nim = encoded.shape[0]
-        reconstructed = np.zeros((Nim,*self.in_shape[1:]))
-    
-        for ii in range(0,Nim,self.BATCH):
-            # DECODER
-            reconstructed[ii:ii+self.BATCH,:,:,:] = tf.nn.conv2d_transpose(
-                encoded[ii:ii+self.BATCH,:,:,:],
+        out_shape = (Nim,self.stride_size*encoded.shape[1],self.stride_size*encoded.shape[2],int(encoded.shape[3]/self.stride_size**2))
+
+        reconstructed = tf.nn.conv2d_transpose(
+                encoded,
                 self.W,
-                (self.BATCH,*self.in_shape[1:]),
+                out_shape,
                 self.stride_size, padding='SAME')
 
-        return reconstructed
+        return reconstructed.numpy()
 
     @tf.function()  # Precompile
     def train_step(self,
@@ -188,9 +174,7 @@ class OrthoConv:
                    optimizer : tf.keras.optimizers.Optimizer
                    ) -> List[float]:
         """One training step.
-
         Performs one step of training and back propogation.
-
         Parameters
         ----------
         inputs : numpy.ndarray
@@ -230,10 +214,8 @@ class OrthoConv:
 
     def train(self, dataset, epochs, optimizer):
         """Training loop.
-
         The training loop for certain number of epochs. Prints out the losses
         after each training epoch.
-
         Parameters
         ----------
         dataset : tensorflow.data.Dataset
@@ -252,10 +234,8 @@ class OrthoConv:
 
     def exact_inverse(self, input_shape, encoded):
         """Computes exact inverse.
-
         Uses the double block toeplitz matrix that representations the
         convolution transform in order to compute an exact inverse.
-
         Parameters
         ----------
         input_shape : numpy.ndarray
@@ -286,10 +266,8 @@ class OrthoConv:
 
     def sparse_toeplitz(self, input_shape):
         '''Generates convolutional matrix
-
         Calculates the toeplitz matrix corresponding to the convolution using
         sparse tensors.
-
         Parameters
         ----------
         input_shape : List[int]
@@ -312,7 +290,6 @@ class OrthoConv:
     
     def logdetJ(self, input_shape):
         """Calculates log det(J)
-
         Calculates the logarithm of the determinant of the Jacobian of the
         transformation.
         """
